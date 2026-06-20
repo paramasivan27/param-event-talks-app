@@ -563,15 +563,24 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 500;
 }
 
-.card-link-icon {
+.card-link-icon,
+.card-copy-icon {
     color: var(--color-text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
     opacity: 0;
-    transition: opacity var(--transition-fast);
+    transition: opacity var(--transition-fast), color var(--transition-fast);
 }
-.update-card:hover .card-link-icon {
+.update-card:hover .card-link-icon,
+.update-card:hover .card-copy-icon {
     opacity: 1;
 }
-.card-link-icon:hover {
+.card-link-icon:hover,
+.card-copy-icon:hover {
     color: var(--color-text-primary);
 }
 

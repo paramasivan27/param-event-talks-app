@@ -11,6 +11,7 @@ const activeHashtags = new Set(['#BigQuery', '#GoogleCloud']);
 
 // Elements
 const refreshBtn = document.getElementById('refreshBtn');
+const exportCsvBtn = document.getElementById('exportCsvBtn');
 const refreshSpinner = document.getElementById('refreshSpinner');
 const syncStatus = document.getElementById('syncStatus');
 const searchInput = document.getElementById('searchInput');
@@ -114,6 +115,7 @@ function setupEventListeners() {
     });
     
     // Action Buttons
+    exportCsvBtn.addEventListener('click', exportToCSV);
     copyClipboardBtn.addEventListener('click', copyTweetToClipboard);
     tweetBtn.addEventListener('click', postToTwitter);
 }
@@ -335,6 +337,12 @@ function renderFeedList() {
                     <span class="badge ${badgeClass}">${update.type}</span>
                     <div class="card-meta">
                         <span class="card-date">${update.date}</span>
+                        <button class="card-copy-icon" title="Copy release notes to clipboard" onclick="event.stopPropagation();">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
                         <a href="${update.link}" target="_blank" rel="noopener noreferrer" class="card-link-icon" title="View official release documentation" onclick="event.stopPropagation();">
                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
@@ -348,6 +356,19 @@ function renderFeedList() {
                     ${update.contentHtml}
                 </div>
             `;
+            
+            // Card copy to clipboard event
+            const cardCopyBtn = card.querySelector('.card-copy-icon');
+            if (cardCopyBtn) {
+                cardCopyBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(update.contentText).then(() => {
+                        showToast("Card text copied to clipboard!");
+                    }).catch(err => {
+                        showToast("Failed to copy card text.");
+                    });
+                });
+            }
             
             // Select event
             card.addEventListener('click', () => selectUpdateCard(update));
@@ -475,4 +496,51 @@ function showToast(msg) {
     toastTimeout = setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
+}
+
+// Export filtered release notes list to CSV format
+function exportToCSV() {
+    if (filteredUpdates.length === 0) {
+        showToast("No updates available to export.");
+        return;
+    }
+    
+    // CSV Header row
+    const headers = ['Date', 'Type', 'Category', 'Plaintext Content', 'Source Link'];
+    
+    // Helper to safely escape quotes, newlines and commas
+    const escapeCSV = (str) => {
+        if (str === null || str === undefined) return '';
+        // Escape existing quotes with double quotes
+        const formatted = str.toString().replace(/"/g, '""');
+        return `"${formatted}"`;
+    };
+    
+    const rows = filteredUpdates.map(update => [
+        escapeCSV(update.date),
+        escapeCSV(update.type),
+        escapeCSV(update.category),
+        escapeCSV(update.contentText),
+        escapeCSV(update.link)
+    ]);
+    
+    const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    // Dynamic download link generation
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    
+    // Use current date for filename
+    const dateStr = new Date().toISOString().split('T')[0];
+    link.setAttribute("download", `bigquery_release_notes_${dateStr}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("CSV export completed successfully!");
 }
